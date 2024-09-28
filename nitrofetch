@@ -1,0 +1,232 @@
+#!/bin/bash
+
+
+# oooo   oooo ooooo ooooooooooo oooooooooo      
+#  8888o  88   888  88  888  88  888    888     
+#  88 888o88   888      888      888oooo88      
+#  88   8888   888      888      888  88o       
+# o88o    88  o888o    o888o    o888o  88o8     
+                                              
+#   ooooooo  ooooooooooo ooooooooooo ooooooooooo
+# o888   888o 888    88   888    88  88  888  88
+# 888     888 888ooo8     888ooo8        888    
+# 888o   o888 888         888    oo      888    
+#   88ooo88  o888o       o888ooo8888    o888o   
+                                              
+#   oooooooo8 ooooo ooooo                       
+# o888     88  888   888                        
+# 888          888ooo888                        
+# 888o     oo  888   888                        
+#  888oooo88  o888o o888o                       
+#
+#
+# Developed by theridev
+# "My back hurts, should've coded this in a more comfortable position"
+# - The author himself
+# << 28.09.2024 >>
+#
+
+# char used for colors
+CHAR=●
+
+# define colors
+RESTORE='\033[0m'
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+BLUE='\033[00;34m'
+CYAN='\033[00;36m'
+PURPLE='\033[00;35m'
+YELLOW='\033[00;33m'
+LIGHTGRAY='\033[00;37m'
+LRED='\033[01;31m'
+LGREEN='\033[01;32m'
+LYELLOW='\033[01;33m'
+LBLUE='\033[01;34m'
+LPURPLE='\033[01;35m'
+LCYAN='\033[01;36m'
+WHITE='\033[01;37m'
+
+# Get username, hostname to display on the top
+user=$(whoami)
+hostname=$(hostnamectl --static)
+hostnameuser="$user@$hostname"
+
+# Return which command should be used to check all the installed packages
+function return_package_manager_command() {
+  # get the OS name
+  name=$(awk -F= '/^PRETTY_NAME/ { gsub(/"/, "", $2); print $2 }' /etc/os-release | tr '[:upper:]' '[:lower:]')
+
+  if [[ $name == *"ubuntu"* || $name == *"debian"* || $name == *"mint"* || $name == *"deepin"* || $name == *"kali"* ]]; then
+    echo "apt list --installed | wc --lines"
+  elif [[ $name == *"fedora"* || $name == *"red hat"* || $name == *"oracle"* || $name == *"rocky"* ]]; then
+    echo "dnf list installed | wc --lines"
+  elif [[ $name == *"artix"* || $name == *"steam"* || $name == *"arch"* || $name == *"manjaro"* ]]; then
+    echo "pacman -Q | wc --lines"
+  else
+    echo "Unsupported distribution" # oops
+  fi
+}
+
+# output RAM
+ram_output() {
+    local totalRAM=$(grep -E 'MemTotal' /proc/meminfo | awk '{print $2}')
+    local freeRAM=$(grep -E 'MemAvailable' /proc/meminfo | awk '{print $2}')
+    
+    # failed to fetch RAM info :c
+    if [[ -z "$totalRAM" || -z "$freeRAM" ]]; then
+        print_centered "$RED ERROR: $RESTORE" "Unable to fetch RAM info!"
+        return
+    fi
+    
+    # total RAM - free RAM = used RAM!
+    local usedRAM=$((totalRAM - freeRAM))
+    local RAMPercantage=$(awk -v total="$totalRAM" -v used="$usedRAM" 'BEGIN {print (100/total * used)}')
+    local percentage=$(echo $RAMPercantage | awk '{print int($1 + 0.5)}')
+
+    local bar_length=40   # length of the progress bar, do I have to explain?
+    local filled_length=$((percentage * bar_length / 100))
+    local empty_length=$((bar_length - filled_length))
+
+    # create the filled (###) and empty (---) parts of the progress bar
+    local filled_bar=$(printf "%${filled_length}s" | tr ' ' '#')
+    local empty_bar=$(printf "%${empty_length}s" | tr ' ' '-')
+
+    # display the progress bar :3
+    print_centered "$LCYAN RAM: $RESTORE" "$usedRAM / $totalRAM [$filled_bar$empty_bar] ${percentage}%"
+}
+
+# i don't know
+stripped_length() {
+  local stripped=$(echo -e "$1" | sed 's/\x1B\[[0-9;]*[JKmsu]//g')  # remove ANSI escape sequences
+  echo "${#stripped}"
+}
+
+# probably the most commonly used function... to print text in the center of terminal.
+print_centered() {
+  local left_part="$1"  # this is in color
+  local right_part="$2" # this is not in color
+  
+  local term_width=$(tput cols)  # get terminal width
+  local left_str_length=$(stripped_length "$left_part")  # get the length of the colored part 
+  local right_str_length="${#right_part}"  # length of the completely normal part
+  local total_length=$((left_str_length + right_str_length))  # length of both!
+
+  if [[ $total_length -ge $term_width ]]; then
+    echo -e "$left_part$right_part"
+  else
+    local padding=$(( (term_width - total_length) / 2 )) # calculations :3
+    printf "%${padding}s"  # print padding for the right part
+    echo -e "$left_part$right_part"  # print both parts
+  fi
+}
+
+# main function, gets executed when there are no args
+nitrofetch() {
+  # print decoration
+  echo -e "$LRED"
+  print_centered "◇─◇──◇─────◇──◇─◇"
+  echo -e "$RESTORE"
+
+  #print hostname and user next to each other, seperated by "@"
+  tput bold
+  print_centered "" "$hostnameuser"
+  tput sgr0
+
+  # another decoration
+  echo -e "$LRED"
+  print_centered "◇─◇──◇─────◇──◇─◇"
+  echo -e "$RESTORE"
+
+  # get architecture and OS name, connect them together, seperated.
+  arch=$(uname -m)
+  name=$(awk -F= '/^PRETTY_NAME/ { gsub(/"/, "", $2); print $2 }' /etc/os-release)
+  os="$name $arch"
+
+  # get device name, kernel version, and uptime (why is getting uptime so complicated?)
+  device=$(cat /sys/devices/virtual/dmi/id/product_family)
+  kernel=$(uname -r)
+  uptime=$(uptime | sed -E 's/^[^,]*up *//; s/, *[[:digit:]]* users.*//; s/min/minutes/; s/([[:digit:]]+):0?([[:digit:]]+)/\1 hours, \2 minutes/')
+
+  # get how many packages does the built-in package manager has installed
+  builtinPackages=$(return_package_manager_command)
+
+  # did return_package_manager_command return something?
+  if [[ $builtinPackages == "Unsupported distribution" ]]; then
+    print_centered "$RED ERROR: $RESTORE" "Distribution package manager not found!"
+  else
+    package_count=$(eval $builtinPackages)  # get the package count
+  fi
+
+  packageManagerName=${builtinPackages%% *}
+
+  # check if flatpak is installed, if so, get the package count.
+  if command -v flatpak 2>&1 >/dev/null; then
+    flatpakOutput=$(flatpak list --columns=application | wc --lines)
+    flatpakPackages=$(($flatpakOutput-1))
+  else
+    flatpakPackages="0"
+  fi
+
+  # check if snap is installed, if so, get the package count.
+  if command -v snap 2>&1 >/dev/null; then
+    snapPackages=$(ls -1 /var/lib/snapd/snaps | wc --lines)
+  else
+    snapPackages="0"
+  fi
+
+  # get the current desktop env, window manager, combine them both, shell type,
+  # terminal emulator, CPU model, GPU model and resolution (that one was painful) 
+  desktopEnv=$(printenv XDG_CURRENT_DESKTOP)
+  windowMgr=$(printenv XDG_SESSION_TYPE)
+  DEWM="$desktopEnv / $windowMgr"
+  shellType=$(tr '\0' ' ' < /proc/$$/cmdline)
+  terminalEmulator=$(ps -o comm= -p "$(($(ps -o ppid= -p "$(($(ps -o sid= -p "$$")))")))")
+  CPUType=$(lscpu | grep -E 'Model name' | awk -F': +' '{print $2}')
+  GPUType=$(lspci | grep -E 'VGA|3D' | awk -F'[][]' '{print $2}')
+  resolution=$(cat /sys/class/drm/*/modes)
+
+  # print 'em all! and centered!
+  print_centered "$RED OS: $RESTORE" "$os"
+  print_centered "$BLUE HOST: $RESTORE" "$device"
+  print_centered "$YELLOW KERNEL: $RESTORE" "$kernel"
+  print_centered "$CYAN UPTIME: $RESTORE" "$uptime"
+  print_centered "$GREEN PACKAGES: $RESTORE" "$package_count ($packageManagerName), $flatpakPackages (Flatpak), $snapPackages (Snap)"
+  print_centered "$WHITE TERMINAL: $RESTORE" "$terminalEmulator"
+  print_centered "$PURPLE DE/WM: $RESTORE" "$DEWM"
+  ram_output # that one needs a whole function, but im proud of it
+  print_centered "$LRED CPU: $RESTORE" "$CPUType"
+  print_centered "$LYELLOW GPU: $RESTORE" "$GPUType"
+  print_centered "$LCYAN RESOLUTION: $RESTORE" "$resolution"
+
+  # print colors, its not that scary
+  print_centered "$RED$CHAR$GREEN$CHAR$BLUE$CHAR$CYAN$CHAR$PURPLE$CHAR$YELLOW$CHAR$LIGHTGRAY$CHAR$LRED$CHAR$LGREEN$LCHAR$LBLUE$CHAR$LPURPLE$CHAR$LCYAN$CHAR$LYELLOW$CHAR$WHITE$CHAR$RESTORE"
+
+  echo #new line, because funny
+}
+
+help() {
+  # this is so terribly formatted its hard to edit it. lol.
+  printf "\n${LCYAN}nitrofetch${RESTORE}: nitrofetch [] [help...]\n    A fetch command humanity deserves.\n\n    ${LCYAN}DEFAULT:${RESTORE}\n      Display the default nitrofetch command.\n\n    ${LCYAN}Options:${RESTORE}\n      (soon)\n\n    ${LCYAN}Arguments:${RESTORE}\n      HELP    Display this command.\n      VERSION Display information about nitrofetch.\n\n    ${LCYAN}Exit Status:${RESTORE}\n    Returns success unless a command does not exist.\n\n"
+}
+
+
+
+version() {
+  # this is so terribly formatted its hard to edit it. lol.
+  printf "\n    |\__/,|   (  \n  _.|o o  |_   ) )\n-(((---(((--------\n♥$LRED Nitrofetch v1.0\n$RESTORE♥ Developed by ${CYAN}theridev$RESTORE (https://github.com/theridev)\nA fetch command humanity deserves.\n\n"
+}
+
+if [ $# -eq 0 ]; then
+  nitrofetch # a fetch command humanity deserves
+elif [ "$1" = "help" ]; then
+  help # a help command. useless.
+elif [ "$1" = "version" ]; then
+  version # this actually looks sick
+else
+  print_centered "$RED ERROR: $RESTORE" "unknown command!"
+fi
+
+# I hope you enjoyed reading my commands. I didn't have fun writing them.
+# I dedicate this project to my friend heigarur, i wouldnt live long enough to
+# write that project without his support
+# I know he will never read it,  but I appreciate his support so much <3
