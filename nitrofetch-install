@@ -7,6 +7,6 @@ echo -e "$LGREEN>>$RESTORE Downloading nitrofetch..."
 sudo curl -s https://raw.githubusercontent.com/theridev/nitrofetch/main/nitrofetch -o nitrofetch
 echo -e "$LGREEN>>$RESTORE Giving exec rights to nitrofetch..."
 sudo chmod +x nitrofetch
-echo "< ${LGREEN}OK >$RESTORE Nitrofetch is installed!"
+echo -e "< ${LGREEN}OK >$RESTORE Nitrofetch is installed!"
 read -n1 -r -p "Press any key to continue..." key
 echo
