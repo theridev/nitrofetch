@@ -179,7 +179,7 @@ nitrofetch() {
   desktopEnv=$(printenv XDG_CURRENT_DESKTOP)
   windowMgr=$(printenv XDG_SESSION_TYPE)
   DEWM="$desktopEnv / $windowMgr"
-  shellType=$(tr '\0' ' ' < /proc/$$/cmdline)
+  shellType=$(echo ${SHELL##*/})
   terminalEmulator=$(ps -o comm= -p "$(($(ps -o ppid= -p "$(($(ps -o sid= -p "$$")))")))")
   CPUType=$(lscpu | grep -E 'Model name' | awk -F': +' '{print $2}')
   GPUType=$(lspci | grep -E 'VGA|3D' | awk -F'[][]' '{print $2}')
@@ -192,6 +192,7 @@ nitrofetch() {
   print_centered "$CYAN UPTIME: $RESTORE" "$uptime"
   print_centered "$GREEN PACKAGES: $RESTORE" "$package_count ($packageManagerName), $flatpakPackages (Flatpak), $snapPackages (Snap)"
   print_centered "$WHITE TERMINAL: $RESTORE" "$terminalEmulator"
+  print_centered "$LBLUE SHELL: $RESTORE" "$shellType"
   print_centered "$PURPLE DE/WM: $RESTORE" "$DEWM"
   ram_output # that one needs a whole function, but im proud of it
   print_centered "$LRED CPU: $RESTORE" "$CPUType"
