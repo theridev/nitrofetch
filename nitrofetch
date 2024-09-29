@@ -56,11 +56,11 @@ function return_package_manager_command() {
   # get the OS name
   name=$(awk -F= '/^PRETTY_NAME/ { gsub(/"/, "", $2); print $2 }' /etc/os-release | tr '[:upper:]' '[:lower:]')
 
-  if [[ $name == *"ubuntu"* || $name == *"debian"* || $name == *"mint"* || $name == *"deepin"* || $name == *"kali"* ]]; then
+  if [[ $name == *"ubuntu"* || $name == *"pop"* || $name == *"tails"* || $name == *"zorin"* || $name == *"debian"* || $name == *"mint"* || $name == *"deepin"* || $name == *"kali"* ]]; then
     echo "apt list --installed | wc --lines"
   elif [[ $name == *"fedora"* || $name == *"red hat"* || $name == *"oracle"* || $name == *"rocky"* ]]; then
     echo "dnf list installed | wc --lines"
-  elif [[ $name == *"artix"* || $name == *"steam"* || $name == *"arch"* || $name == *"manjaro"* ]]; then
+  elif [[ $name == *"artix"* || $name == *"endeavour"* || $name == *"steam"* || $name == *"arch"* || $name == *"manjaro"* ]]; then
     echo "pacman -Q | wc --lines"
   else
     echo "Unsupported distribution" # oops
@@ -207,14 +207,28 @@ nitrofetch() {
 
 help() {
   # this is so terribly formatted its hard to edit it. lol.
-  printf "\n${LCYAN}nitrofetch${RESTORE}: nitrofetch [] [help...]\n    A fetch command humanity deserves.\n\n    ${LCYAN}DEFAULT:${RESTORE}\n      Display the default nitrofetch command.\n\n    ${LCYAN}Options:${RESTORE}\n      (soon)\n\n    ${LCYAN}Arguments:${RESTORE}\n      HELP    Display this command.\n      VERSION Display information about nitrofetch.\n\n    ${LCYAN}Exit Status:${RESTORE}\n    Returns success unless a command does not exist.\n\n"
+  printf "\n${LCYAN}nitrofetch${RESTORE}: nitrofetch [] [help...]\n    A fetch command humanity deserves.\n\n    ${LCYAN}DEFAULT:${RESTORE}\n      Display the default nitrofetch command.\n\n    ${LCYAN}Options:${RESTORE}\n      --char <char>                Replace the default color char (●)\n      --no-colors                  Do not use any colors. \n      --use-one-color <color>      Display nitrofetch using only one color\n      --version                    Display a more basic version command.\n\n     ${LCYAN}Arguments:${RESTORE}\n      HELP    Display this command.\n      VERSION Display information about nitrofetch.\n      UPDATE  Update nitrofetch to the latest version.\n\n    ${LCYAN}Exit Status:${RESTORE}\n    Returns success unless a command does not exist.\n\n"
 }
 
-
+update() {
+  update=$(curl -s "https://raw.githubusercontent.com/theridev/nitrofetch/refs/heads/main/nitrofetch" || die "Connection error")
+	update="$(printf '%s\n' "$update" | diff -u "$(which nitrofetch)" -)"
+	if [ -z "$update" ]; then
+		echo -e "$LGREEN>>$RESTORE Nitrofetch is up to date!"
+	else
+		if printf '%s\n' "$update" | sudo patch "$(which nitrofetch)" -; then
+      echo -e "$LGREEN>>$RESTORE Nitrofetch has been updated!\n"
+    
+		else
+			print_centered "${RED}An error occured.${RESTORE}" "\n"
+		fi
+	fi
+	exit 0
+}
 
 version() {
   # this is so terribly formatted its hard to edit it. lol.
-  printf "\n    |\__/,|   (  \n  _.|o o  |_   ) )\n-(((---(((--------\n♥$LRED Nitrofetch v1.0\n$RESTORE♥ Developed by ${CYAN}theridev$RESTORE (https://github.com/theridev)\nA fetch command humanity deserves.\n\n"
+  printf "\n    |\__/,|   (  \n  _.|o o  |_   ) )\n-(((---(((--------\n♥$LRED Nitrofetch v1.1\n$RESTORE♥ Developed by ${CYAN}theridev$RESTORE (https://github.com/theridev)\nA fetch command humanity deserves.\n\n"
 }
 
 if [ $# -eq 0 ]; then
@@ -223,11 +237,71 @@ elif [ "$1" = "help" ]; then
   help # a help command. useless.
 elif [ "$1" = "version" ]; then
   version # this actually looks sick
+elif [ "$1" = "update" ]; then
+  update # silly update script :3
+elif [[ "$*" == *"--no-colors"* ]]; then
+  for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE; do
+    eval "$currentvar=" # make all of the color strings a blank string.
+  done
+  nitrofetch
+elif [[ "$*" == *"--char"* ]]; then
+  # check the argument after "--char". Maybe its not a correct way.
+  for ((i=1; i<=$#; i++)); do
+    if [ "${!i}" = "--char" ]; then
+      next_arg_index=$((i+1))
+      next_arg=${!next_arg_index}
+      if [ -n "$next_arg" ]; then
+          eval "CHAR='$next_arg'"
+      fi # if no arg was provided, use the default char
+      break
+    fi
+  done
+
+  nitrofetch
+elif [[ "$*" == *"--use-one-color"* ]]; then
+  # check the argument after "--use-one-color"
+  for ((i=1; i<=$#; i++)); do
+    if [ "${!i}" = "--use-one-color" ]; then
+      next_arg_index=$((i+1))
+      next_arg=${!next_arg_index}
+      if [ -n "$next_arg" ]; then
+          # convert the color argument to uppercase. Ex: "RED" and "red" will work.
+          color=${next_arg^^}
+
+          # validate the color variable
+          if [[ ! -v $color ]]; then
+              print_centered "$RED ERROR: $RESTORE" "Invalid color specified: $next_arg"
+              exit 1
+          fi
+
+          # loop through all color variables and assign them the value of the selected color
+          for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE; do
+            eval "$currentvar=\"\${$color}\""  # assign the value of the specified color to all variables
+          done
+      else
+          print_centered "$RED ERROR: $RESTORE" "No color specified for --use-one-color!"
+      fi
+      nitrofetch # call nitrofetch to display the output with the new colors
+      break
+    fi
+  done
+
+  elif [[ "$*" == *"--version"* ]]; then
+    echo "Nitrofetch v1.1" # A more basic and less fancy version command.
+
 else
   print_centered "$RED ERROR: $RESTORE" "unknown command!"
 fi
-
 # I hope you enjoyed reading my commands. I didn't have fun writing them.
-# I dedicate this project to my friend heigarur, i wouldnt live long enough to
-# write that project without his support
-# I know he will never read it,  but I appreciate his support so much <3
+# I dedicate this project to my friend heigarur, i wouldn't live long enough to
+# write that project without his support.
+# I know he will never read it, but I appreciate his support so much <3
+
+# -------------
+# Version logs!
+# -------------
+
+# Version 1.1
+# "editing the help command is painful."
+# - The author himself
+# << 29.09.2024 >>

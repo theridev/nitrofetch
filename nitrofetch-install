@@ -1,3 +1,5 @@
+#!/bin/bash
+
 LGREEN='\033[01;32m'
 RESTORE='\033[0m'
 
@@ -7,4 +9,4 @@ echo -e "$LGREEN>>$RESTORE Downloading nitrofetch..."
 sudo curl -s https://raw.githubusercontent.com/theridev/nitrofetch/main/nitrofetch -o nitrofetch
 echo -e "$LGREEN>>$RESTORE Giving exec rights to nitrofetch..."
 sudo chmod +x nitrofetch
-echo -e "< ${LGREEN}OK >$RESTORE Nitrofetch is installed!"
+echo -e "$LGREEN>>$RESTORE Nitrofetch is installed!"
