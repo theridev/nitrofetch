@@ -11,5 +11,15 @@ wget -qO - https://raw.githubusercontent.com/theridev/nitrofetch/refs/heads/main
 ```
 Nitrofetch works without any nerd fonts!
 
+## Update:
+### Linux:
+#### Version v1.1 or higher:
+Open terminal and paste in this command:
+```
+nitrofetch update
+```
+#### Other versions:
+You will have to reinstall nitrofetch. See [Installation](https://github.com/theridev/nitrofetch/edit/main/README.md#installation)
+
 ## What can it print out?
 Nitrofetch prints out the following information: **OS, Host Model, Kernel Version, Uptime, Installed Packages *(apt, dnf, pacman, flatpak and snap are supported)*, current terminal emulator, current shell, current desktop enviroment / window manager, CPU model, GPU model, resolution and some colors**
