@@ -37,6 +37,7 @@ BLUE='\033[00;34m'
 CYAN='\033[00;36m'
 PURPLE='\033[00;35m'
 YELLOW='\033[00;33m'
+
 LIGHTGRAY='\033[00;37m'
 LRED='\033[01;31m'
 LGREEN='\033[01;32m'
@@ -46,12 +47,21 @@ LPURPLE='\033[01;35m'
 LCYAN='\033[01;36m'
 WHITE='\033[01;37m'
 
+HBLACK='\e[1;90m'
+HRED='\e[1;91m'
+HGREEN='\e[1;92m'
+HYELLOW='\e[1;93m'
+HBLUE='\e[1;94m'
+HPURPLE='\e[1;95m'
+HCYAN='\e[1;96m'
+HWHITE='\e[1;97m'
+
 # Get username, hostname to display on the top
 user=$(whoami)
 hostname=$(hostnamectl --static)
 hostnameuser="$user@$hostname"
 
-# Return which command should be used to check all the installed packages
+# return which command should be used to check all the installed packages
 function return_package_manager_command() {
   # get the OS name
   name=$(awk -F= '/^PRETTY_NAME/ { gsub(/"/, "", $2); print $2 }' /etc/os-release | tr '[:upper:]' '[:lower:]')
@@ -67,6 +77,33 @@ function return_package_manager_command() {
   fi
 }
 
+# output disk space
+disk_output() {
+    local total=$(df / | awk 'NR==2 {print $2}')
+    local used=$(df / | awk 'NR==2 {print $3}')
+    local free=$(df / | awk 'NR==2 {print $4}')
+    
+    # failed to fetch disk space info :c
+    if [[ -z "$total" || -z "$free" ]]; then
+        print_centered "$HRED ERROR: $RESTORE" "Unable to fetch disk info!"
+        return
+    fi
+    
+    local freediskpercantage=$(awk -v total="$total" -v used="$used" 'BEGIN {print (100/total * used)}')
+    local percentage=$(echo $freediskpercantage | awk '{print int($1 + 0.5)}')
+
+    local bar_length=40   # length of the progress bar, do I have to explain?
+    local filled_length=$((percentage * bar_length / 100))
+    local empty_length=$((bar_length - filled_length))
+
+    # create the filled (###) and empty (---) parts of the progress bar
+    local filled_bar=$(printf "%${filled_length}s" | tr ' ' '#')
+    local empty_bar=$(printf "%${empty_length}s" | tr ' ' '-')
+
+    # display the progress bar :3
+    print_centered "$LPURPLE DISK: $RESTORE" "$used / $total [$filled_bar$empty_bar] ${percentage}%"
+}
+
 # output RAM
 ram_output() {
     local totalRAM=$(grep -E 'MemTotal' /proc/meminfo | awk '{print $2}')
@@ -74,7 +111,7 @@ ram_output() {
     
     # failed to fetch RAM info :c
     if [[ -z "$totalRAM" || -z "$freeRAM" ]]; then
-        print_centered "$RED ERROR: $RESTORE" "Unable to fetch RAM info!"
+        print_centered "$HRED ERROR: $RESTORE" "Unable to fetch RAM info!"
         return
     fi
     
@@ -123,18 +160,18 @@ print_centered() {
 # main function, gets executed when there are no args
 nitrofetch() {
   # print decoration
-  echo -e "$LRED"
-  print_centered "◇─◇──◇─────◇──◇─◇"
+  echo -e "$HRED"
+  print_centered "┏━━━━ ▀▄▀▄ ━━━━┓"
   echo -e "$RESTORE"
 
-  #print hostname and user next to each other, seperated by "@"
+  # print hostname and user next to each other, seperated by "@"
   tput bold
   print_centered "" "$hostnameuser"
   tput sgr0
 
   # another decoration
-  echo -e "$LRED"
-  print_centered "◇─◇──◇─────◇──◇─◇"
+  echo -e "$HRED"
+  print_centered "┗━━━━ ▄▀▄▀ ━━━━┛"
   echo -e "$RESTORE"
 
   # get architecture and OS name, connect them together, seperated.
@@ -152,7 +189,7 @@ nitrofetch() {
 
   # did return_package_manager_command return something?
   if [[ $builtinPackages == "Unsupported distribution" ]]; then
-    print_centered "$RED ERROR: $RESTORE" "Distribution package manager not found!"
+    print_centered "$HRED ERROR: $RESTORE" "Distribution package manager not found!"
   else
     package_count=$(eval $builtinPackages)  # get the package count
   fi
@@ -163,15 +200,19 @@ nitrofetch() {
   if command -v flatpak 2>&1 >/dev/null; then
     flatpakOutput=$(flatpak list --columns=application | wc --lines)
     flatpakPackages=$(($flatpakOutput-1))
+    flatpakTotal=", $flatpakPackages (Flatpak)"
   else
     flatpakPackages="0"
+    flatpakTotal=""
   fi
 
   # check if snap is installed, if so, get the package count.
   if command -v snap 2>&1 >/dev/null; then
     snapPackages=$(ls -1 /var/lib/snapd/snaps | wc --lines)
-  else
+    snapTotal=", $snapPackages (Snap)"
     snapPackages="0"
+  else
+    snapTotal=""
   fi
 
   # get the current desktop env, window manager, combine them both, shell type,
@@ -186,41 +227,42 @@ nitrofetch() {
   resolution=$(cat /sys/class/drm/*/modes)
 
   # print 'em all! and centered!
-  print_centered "$RED OS: $RESTORE" "$os"
-  print_centered "$BLUE HOST: $RESTORE" "$device"
-  print_centered "$YELLOW KERNEL: $RESTORE" "$kernel"
-  print_centered "$CYAN UPTIME: $RESTORE" "$uptime"
-  print_centered "$GREEN PACKAGES: $RESTORE" "$package_count ($packageManagerName), $flatpakPackages (Flatpak), $snapPackages (Snap)"
-  print_centered "$WHITE TERMINAL: $RESTORE" "$terminalEmulator"
-  print_centered "$LBLUE SHELL: $RESTORE" "$shellType"
-  print_centered "$PURPLE DE/WM: $RESTORE" "$DEWM"
+  print_centered "$LRED OS: $RESTORE" "$os"
+  print_centered "$LCYAN HOST: $RESTORE" "$device"
+  print_centered "$LYELLOW KERNEL: $RESTORE" "$kernel"
+  print_centered "$HYELLOW UPTIME: $RESTORE" "$uptime"
+  print_centered "$HPURPLE SHELL: $RESTORE" "$shellType"
+  print_centered "$LGREEN PACKAGES: $RESTORE" "$package_count ($packageManagerName)$flatpakTotal$snapTotal"
+  print_centered "$HGREEN TERMINAL: $RESTORE" "$terminalEmulator"
+  print_centered "$HCYAN DE/WM: $RESTORE" "$DEWM"
   ram_output # that one needs a whole function, but im proud of it
-  print_centered "$LRED CPU: $RESTORE" "$CPUType"
-  print_centered "$LYELLOW GPU: $RESTORE" "$GPUType"
-  print_centered "$LCYAN RESOLUTION: $RESTORE" "$resolution"
+  disk_output # copied from ram_output. do you have a problem?
+  print_centered "$HRED CPU: $RESTORE" "$CPUType"
+  print_centered "$HYELLOW GPU: $RESTORE" "$GPUType"
+  print_centered "$HCYAN RESOLUTION: $RESTORE" "$resolution"
 
   # print colors, its not that scary
-  print_centered "$RED$CHAR$GREEN$CHAR$BLUE$CHAR$CYAN$CHAR$PURPLE$CHAR$YELLOW$CHAR$LIGHTGRAY$CHAR$LRED$CHAR$LGREEN$LCHAR$LBLUE$CHAR$LPURPLE$CHAR$LCYAN$CHAR$LYELLOW$CHAR$WHITE$CHAR$RESTORE"
+  print_centered "$RED$CHAR$GREEN$CHAR$BLUE$CHAR$CYAN$CHAR$PURPLE$CHAR$YELLOW$CHAR$HBLACK$CHAR$HRED$CHAR$HGREEN$CHAR$HYELLOW$SHAR$HBLUE$CHAR$HPURPLE$CHAR$HCYAN$CHAR$HWHITE$CHAR$RESTORE"
 
   echo #new line, because funny
 }
 
 help() {
   # this is so terribly formatted its hard to edit it. lol.
-  printf "\n${LCYAN}nitrofetch${RESTORE}: nitrofetch [] [help...]\n    A fetch command humanity deserves.\n\n    ${LCYAN}DEFAULT:${RESTORE}\n      Display the default nitrofetch command.\n\n    ${LCYAN}Options:${RESTORE}\n      --char <char>                Replace the default color char (●)\n      --no-colors                  Do not use any colors. \n      --use-one-color <color>      Display nitrofetch using only one color\n      --version                    Display a more basic version command.\n\n     ${LCYAN}Arguments:${RESTORE}\n      HELP    Display this command.\n      VERSION Display information about nitrofetch.\n      UPDATE  Update nitrofetch to the latest version.\n\n    ${LCYAN}Exit Status:${RESTORE}\n    Returns success unless a command does not exist.\n\n"
+  printf "\n${HCYAN}nitrofetch${RESTORE}: nitrofetch [] [help...]\n    A fetch command humanity deserves.\n\n    ${LCYAN}DEFAULT:${RESTORE}\n      Display the default nitrofetch command.\n\n    ${LCYAN}Options:${RESTORE}\n      --char <char>                Replace the default color char (●)\n      --no-colors                  Do not use any colors. \n      --use-one-color <color>      Display nitrofetch using only one color\n      --version                    Display a more basic version command.\n\n    ${LCYAN}Commands:${RESTORE}\n      HELP      Display this command.\n      VERSION   Display information about nitrofetch.\n      UPDATE    Update nitrofetch to the latest version.\n      GET-RAM   A fancy command to display RAM usage.\n      GET-DISK  A fancy command to display disk space usage.\n\n    ${LCYAN}Exit Status:${RESTORE}\n      Returns success unless a command does not exist.\n\n"
 }
 
+# updates nitrofetch
 update() {
   update=$(curl -s "https://raw.githubusercontent.com/theridev/nitrofetch/refs/heads/main/nitrofetch" || die "Connection error")
 	update="$(printf '%s\n' "$update" | diff -u "$(which nitrofetch)" -)"
-	if [ -z "$update" ]; then
-		echo -e "$LGREEN>>$RESTORE Nitrofetch is up to date!"
+	if [ -z "$update" ]; then echo -e "$LGREEN>>$RESTORE Nitrofetch is up to date!"
 	else
 		if printf '%s\n' "$update" | sudo patch "$(which nitrofetch)" -; then
       echo -e "$LGREEN>>$RESTORE Nitrofetch has been updated!\n"
     
 		else
-			print_centered "${RED}An error occured.${RESTORE}" "\n"
+			print_centered "${HRED}An error occured.${RESTORE}" "\n"
 		fi
 	fi
 	exit 0
@@ -228,7 +270,7 @@ update() {
 
 version() {
   # this is so terribly formatted its hard to edit it. lol.
-  printf "\n    |\__/,|   (  \n  _.|o o  |_   ) )\n-(((---(((--------\n♥$LRED Nitrofetch v1.1\n$RESTORE♥ Developed by ${CYAN}theridev$RESTORE (https://github.com/theridev)\nA fetch command humanity deserves.\n\n"
+  printf "\n    |\__/,|   (  \n  _.|o o  |_   ) )\n-(((---(((--------\n♥$LRED Nitrofetch v1.2\n$RESTORE♥ Developed by ${CYAN}theridev$RESTORE (https://github.com/theridev)\nA fetch command humanity deserves.\n\n"
 }
 
 if [ $# -eq 0 ]; then
@@ -239,8 +281,12 @@ elif [ "$1" = "version" ]; then
   version # this actually looks sick
 elif [ "$1" = "update" ]; then
   update # silly update script :3
+elif [ "$1" = "get-disk" ]; then
+  disk_output # a fancy command for checking disk space
+elif [ "$1" = "get-ram" ]; then
+  ram_output # a fancy command for checking RAM usage
 elif [[ "$*" == *"--no-colors"* ]]; then
-  for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE; do
+  for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE  HBLACK HRED HGREEN HYELLOW HBLUE HPURPLE HCYAN HWITE; do
     eval "$currentvar=" # make all of the color strings a blank string.
   done
   nitrofetch
@@ -270,28 +316,31 @@ elif [[ "$*" == *"--use-one-color"* ]]; then
 
           # validate the color variable
           if [[ ! -v $color ]]; then
-              print_centered "$RED ERROR: $RESTORE" "Invalid color specified: $next_arg"
+              print_centered "$HRED ERROR: $RESTORE" "Invalid color specified: $next_arg"
               exit 1
           fi
 
           # loop through all color variables and assign them the value of the selected color
-          for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE; do
+          for currentvar in CHAR RESTORE RED GREEN BLUE CYAN PURPLE YELLOW LIGHTGRAY LRED LGREEN LYELLOW LBLUE LPURPLE LCYAN WHITE HBLACK HRED HGREEN HYELLOW HBLUE HPURPLE HCYAN HWITE; do
             eval "$currentvar=\"\${$color}\""  # assign the value of the specified color to all variables
           done
       else
-          print_centered "$RED ERROR: $RESTORE" "No color specified for --use-one-color!"
+          print_centered "$HRED ERROR: $RESTORE" "No color specified for --use-one-color!"
+          exit 1
       fi
+      else
       nitrofetch # call nitrofetch to display the output with the new colors
       break
     fi
   done
 
   elif [[ "$*" == *"--version"* ]]; then
-    echo "Nitrofetch v1.1" # A more basic and less fancy version command.
+    echo "Nitrofetch v1.2" # A more basic and less fancy version command.
 
 else
-  print_centered "$RED ERROR: $RESTORE" "unknown command!"
+  print_centered "$HRED ERROR: $RESTORE" "unknown command!"
 fi
+
 # I hope you enjoyed reading my commands. I didn't have fun writing them.
 # I dedicate this project to my friend heigarur, i wouldn't live long enough to
 # write that project without his support.
@@ -305,3 +354,8 @@ fi
 # "editing the help command is painful."
 # - The author himself
 # << 29.09.2024 >>
+
+# Version 1.2
+# "I'm starting to find a connection between this project and my declining mental health"
+# - The author himself
+# << 02.10.2024 >>
