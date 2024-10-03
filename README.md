@@ -1,7 +1,7 @@
 # Nitrofetch
 ###### *A fetch command humanity deserves.*
 
-![image](https://github.com/user-attachments/assets/549a1079-21ff-4181-b33f-86f50a2e3ebb)
+![image](https://github.com/user-attachments/assets/a1a2ae2b-08e2-4d81-b87a-140aa6b6f7bc)
 
 ## Installation:
 ### Linux:
