@@ -224,8 +224,8 @@ nitrofetch() {
   terminalEmulator=$(ps -o comm= -p "$(($(ps -o ppid= -p "$(($(ps -o sid= -p "$$")))")))")
   CPUType=$(lscpu | grep -E 'Model name' | awk -F': +' '{print $2}')
   GPUType=$(lspci | grep -E 'VGA|3D' | awk -F'[][]' '{print $2}')
-  resolution=$(cat /sys/class/drm/*/modes)
-
+  resolution=$(cat /sys/class/drm/*/modes | head -n 1)
+  
   # print 'em all! and centered!
   print_centered "$LRED OS: $RESTORE" "$os"
   print_centered "$LCYAN HOST: $RESTORE" "$device"
